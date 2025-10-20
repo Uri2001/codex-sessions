@@ -1,0 +1,28 @@
+# Binaries
+/codex-sessions
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build directories
+/bin/
+/build/
+/dist/
+
+# Go build artifacts
+*.test
+*.out
+*.coverprofile
+
+# Logs
+*.log
+
+# IDE/editor junk
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
