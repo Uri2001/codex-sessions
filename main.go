@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	"codex-sessions/internal/sessions"
-	"codex-sessions/internal/ui"
+	"github.com/Uri2001/codex-sessions/internal/sessions"
+	"github.com/Uri2001/codex-sessions/internal/ui"
 )
 
 var (

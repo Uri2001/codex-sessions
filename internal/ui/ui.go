@@ -7,11 +7,10 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Uri2001/codex-sessions/internal/sessions"
 	"github.com/gdamore/tcell/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/rivo/tview"
-
-	"codex-sessions/internal/sessions"
 )
 
 const (

@@ -1,4 +1,4 @@
-module codex-sessions
+module github.com/Uri2001/codex-sessions
 
 go 1.25.3
 
