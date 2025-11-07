@@ -1,0 +1,57 @@
+name: Build binaries
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/amd64
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            binary_name: codex-sessions-linux-amd64
+            artifact_name: codex-sessions-linux-amd64
+          - os: macos-latest
+            goos: darwin
+            binary_name: codex-sessions-macos-amd64
+            artifact_name: codex-sessions-macos-amd64
+          - os: windows-latest
+            goos: windows
+            binary_name: codex-sessions-windows-amd64.exe
+            artifact_name: codex-sessions-windows-amd64
+    env:
+      GOARCH: amd64
+      CGO_ENABLED: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+        run: go build -trimpath -ldflags='-s -w' -o "${{ matrix.binary_name }}" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.binary_name }}
+          if-no-files-found: error
