@@ -4,9 +4,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  release:
+    types:
+      - published
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -55,3 +58,11 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.binary_name }}
           if-no-files-found: error
+
+      - name: Upload asset to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ${{ matrix.binary_name }}
+          tag_name: ${{ github.event.release.tag_name }}
