@@ -138,8 +138,9 @@ func parseSessionFile(path string) (*Session, error) {
 	}
 
 	var (
-		createdSet bool
-		lastTS     time.Time
+		metadataSet bool
+		createdSet  bool
+		lastTS      time.Time
 	)
 
 	for {
@@ -171,10 +172,16 @@ func parseSessionFile(path string) (*Session, error) {
 
 		switch entry.Type {
 		case "session_meta":
+			// Fork rollouts include inherited session_meta records after their own.
+			// Only the first record identifies this file; keep reading later events.
+			if metadataSet {
+				break
+			}
 			var payload sessionMetaPayload
 			if err := json.Unmarshal(entry.Payload, &payload); err != nil {
 				return nil, fmt.Errorf("decode session_meta payload: %w", err)
 			}
+			metadataSet = true
 			session.ID = payload.ID
 			session.WorkingDir = payload.CWD
 			if pTs, pErr := parseTimestamp(payload.Timestamp); pErr == nil {
