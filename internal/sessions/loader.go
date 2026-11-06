@@ -21,7 +21,7 @@ const (
 )
 
 // Load discovers and parses Codex CLI sessions located under sessionsDir. When sessionsDir
-// is empty, the default path of "~/.codex/sessions" is used.
+// is empty, ResolveDir selects the directory from CODEX_HOME or the user home.
 func Load(sessionsDir string) ([]Session, error) {
 	root, err := ResolveDir(sessionsDir)
 	if err != nil {
@@ -107,11 +107,15 @@ func Load(sessionsDir string) ([]Session, error) {
 	return sessions, combinedErr
 }
 
-// ResolveDir returns the absolute directory where Codex session logs are stored. When dir is empty,
-// the default "~/.codex/sessions" location is used.
+// ResolveDir returns the directory where Codex session logs are stored.
+// Priority: explicit dir, non-empty CODEX_HOME/sessions, then ~/.codex/sessions.
 func ResolveDir(dir string) (string, error) {
 	if dir != "" {
 		return filepath.Clean(dir), nil
+	}
+
+	if codexHome := os.Getenv("CODEX_HOME"); codexHome != "" {
+		return filepath.Join(codexHome, "sessions"), nil
 	}
 
 	home, err := os.UserHomeDir()

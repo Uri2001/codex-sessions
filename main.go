@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	flagSessionsDir = flag.String("sessions-dir", "", "Path to the Codex CLI sessions directory. Defaults to ~/.codex/sessions.")
+	flagSessionsDir = flag.String("sessions-dir", "", "Path to the Codex CLI sessions directory. Defaults to $CODEX_HOME/sessions if CODEX_HOME is non-empty, otherwise ~/.codex/sessions.")
 	flagCodexBin    = flag.String("codex-bin", "codex", "Codex CLI binary to invoke for resuming sessions.")
 	flagNoResume    = flag.Bool("no-resume", false, "Do not automatically run `codex resume`. Print the selected ID instead.")
 )

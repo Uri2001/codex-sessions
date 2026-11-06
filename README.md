@@ -34,11 +34,21 @@ Run the TUI directly:
 codex-sessions
 ```
 
-By default the tool scans `~/.codex/sessions`. Command-line flags:
+The sessions directory is selected in this order:
+
+1. An explicit, non-empty `--sessions-dir <path>`.
+2. `$CODEX_HOME/sessions` when `CODEX_HOME` is non-empty.
+3. `~/.codex/sessions` when `CODEX_HOME` is unset or empty.
+
+A missing directory or a directory without session logs opens an empty list;
+`Ctrl+C` still exits. A missing higher-priority directory does not trigger a
+fallback to another directory.
+
+Command-line flags:
 
 | Flag | Description |
 |------|-------------|
-| `--sessions-dir <path>` | Override the sessions directory (default `~/.codex/sessions`). |
+| `--sessions-dir <path>` | Override the sessions directory, taking precedence over `CODEX_HOME`. |
 | `--codex-bin <path>` | Path to the Codex CLI binary to execute (default `codex`). |
 | `--no-resume` | Do not spawn `codex resume`; instead print the selected session ID to stdout. |
 

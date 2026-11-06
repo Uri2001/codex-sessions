@@ -74,7 +74,11 @@ func newModel(items []sessions.Session, sessionsRoot, initialStatus string) *mod
 }
 
 func (m *model) run() error {
-	m.app = tview.NewApplication()
+	return m.runApplication(tview.NewApplication())
+}
+
+func (m *model) runApplication(app *tview.Application) error {
+	m.app = app
 
 	m.searchView = tview.NewTextView().
 		SetDynamicColors(true).
@@ -236,6 +240,8 @@ func (m *model) refreshInfoView() {
 
 func (m *model) refreshTable() {
 	m.table.Clear()
+	// A header-only selectable table can trap tview navigation in a search for a selectable cell.
+	m.table.SetSelectable(len(m.filtered) > 0, false)
 
 	headerStyle := tcell.StyleDefault.Bold(true)
 	m.table.SetCell(0, 0, tview.NewTableCell("Updated").
