@@ -12,6 +12,7 @@ import (
 // Session holds aggregated information for a single Codex CLI session.
 type Session struct {
 	ID         string
+	Name       string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	WorkingDir string

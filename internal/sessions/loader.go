@@ -93,6 +93,8 @@ func Load(sessionsDir string) ([]Session, error) {
 		return nil, err
 	}
 
+	combinedErr = errors.Join(combinedErr, loadSessionNames(root, byID))
+
 	sessions := make([]Session, 0, len(byID))
 	for _, s := range byID {
 		// Ensure FilePaths sorted for determinism.

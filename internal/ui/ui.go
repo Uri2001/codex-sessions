@@ -55,6 +55,7 @@ func newModel(items []sessions.Session, sessionsRoot, initialStatus string) *mod
 	for i, sess := range items {
 		key := strings.ToLower(strings.Join([]string{
 			sess.ID,
+			sess.Name,
 			sess.WorkingDir,
 			sess.LastAction,
 			sess.CreatedAt.Format(time.RFC3339),
@@ -244,29 +245,38 @@ func (m *model) refreshTable() {
 	m.table.SetSelectable(len(m.filtered) > 0, false)
 
 	headerStyle := tcell.StyleDefault.Bold(true)
+	m.table.SetCell(0, 1, tview.NewTableCell("Name").
+		SetSelectable(false).
+		SetStyle(headerStyle))
 	m.table.SetCell(0, 0, tview.NewTableCell("Updated").
 		SetSelectable(false).
 		SetStyle(headerStyle))
-	m.table.SetCell(0, 1, tview.NewTableCell("Session ID").
+	m.table.SetCell(0, 2, tview.NewTableCell("Session ID").
 		SetSelectable(false).
 		SetStyle(headerStyle))
-	m.table.SetCell(0, 2, tview.NewTableCell("Directory").
+	m.table.SetCell(0, 3, tview.NewTableCell("Directory").
 		SetSelectable(false).
 		SetStyle(headerStyle))
-	m.table.SetCell(0, 3, tview.NewTableCell("Last Action").
+	m.table.SetCell(0, 4, tview.NewTableCell("Last Action").
 		SetSelectable(false).
 		SetStyle(headerStyle))
 
 	for i, idx := range m.filtered {
 		sess := m.entries[idx].session
 		row := i + 1
+		name := strings.Join(strings.Fields(sess.Name), " ")
+		if name == "" {
+			name = "-"
+		}
+		m.table.SetCell(row, 1, tview.NewTableCell(tview.Escape(name)).
+			SetMaxWidth(40).SetExpansion(2))
 		m.table.SetCell(row, 0, tview.NewTableCell(formatTimestamp(sess.UpdatedAt)).
 			SetExpansion(1))
-		m.table.SetCell(row, 1, tview.NewTableCell(sess.ID).
+		m.table.SetCell(row, 2, tview.NewTableCell(sess.ID).
 			SetExpansion(1))
-		m.table.SetCell(row, 2, tview.NewTableCell(abbreviatePath(sess.WorkingDir, 40)).
+		m.table.SetCell(row, 3, tview.NewTableCell(abbreviatePath(sess.WorkingDir, 40)).
 			SetExpansion(1))
-		m.table.SetCell(row, 3, tview.NewTableCell(truncateText(sess.LastAction, 80)).
+		m.table.SetCell(row, 4, tview.NewTableCell(truncateText(sess.LastAction, 80)).
 			SetExpansion(2))
 	}
 

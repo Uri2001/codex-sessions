@@ -4,7 +4,8 @@
 
 ## Features
 
-- **Fuzzy search** as you type across session IDs, working directories, timestamps, and last actions.
+- **Fuzzy search** as you type across session names, IDs, working directories, timestamps, and last actions.
+- **Session names** from Codex CLI `/rename`, displayed alongside session IDs.
 - **Keyboard-first navigation** with arrow keys, Page Up/Down, and instant highlighting.
 - **Quick resume** with `Enter`, invoking `codex resume <session-id>` (or printing the ID with `--no-resume`).
 - **Safe deletion** of a session and all associated log files via `Del`.
@@ -51,6 +52,23 @@ Command-line flags:
 | `--sessions-dir <path>` | Override the sessions directory, taking precedence over `CODEX_HOME`. |
 | `--codex-bin <path>` | Path to the Codex CLI binary to execute (default `codex`). |
 | `--no-resume` | Do not spawn `codex resume`; instead print the selected session ID to stdout. |
+
+### Session names
+
+The `Name` column shows names recorded by Codex CLI (including `/rename`). Names
+are searchable along with session IDs. Sessions without a recorded name show `-`;
+resuming a session still uses its ID.
+
+Names are read from `session_index.jsonl` in the parent directory of the resolved
+sessions directory: normally `$CODEX_HOME/session_index.jsonl` or
+`~/.codex/session_index.jsonl`. With `--sessions-dir /path/to/sessions`, the index
+is `/path/to/session_index.jsonl`. When browsing a copied sessions directory, copy
+the index alongside it to include names.
+
+The latest valid non-empty name in file order wins. A missing index or malformed
+line does not prevent browsing; read errors are shown as warnings. The index is
+read at startup and is never modified by this tool, including when deleting a
+session.
 
 ### Keybindings
 
