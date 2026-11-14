@@ -57,7 +57,7 @@ func newModel(items []sessions.Session, sessionsRoot, initialStatus string) *mod
 			sess.ID,
 			sess.Name,
 			sess.WorkingDir,
-			sess.LastAction,
+			sess.LastRequest,
 			sess.CreatedAt.Format(time.RFC3339),
 			sess.UpdatedAt.Format(time.RFC3339),
 		}, " "))
@@ -257,7 +257,7 @@ func (m *model) refreshTable() {
 	m.table.SetCell(0, 3, tview.NewTableCell("Directory").
 		SetSelectable(false).
 		SetStyle(headerStyle))
-	m.table.SetCell(0, 4, tview.NewTableCell("Last Action").
+	m.table.SetCell(0, 4, tview.NewTableCell("Last Request").
 		SetSelectable(false).
 		SetStyle(headerStyle))
 
@@ -276,7 +276,7 @@ func (m *model) refreshTable() {
 			SetExpansion(1))
 		m.table.SetCell(row, 3, tview.NewTableCell(abbreviatePath(sess.WorkingDir, 40)).
 			SetExpansion(1))
-		m.table.SetCell(row, 4, tview.NewTableCell(truncateText(sess.LastAction, 80)).
+		m.table.SetCell(row, 4, tview.NewTableCell(tview.Escape(truncateText(sess.LastRequest, 80))).
 			SetExpansion(2))
 	}
 
@@ -377,13 +377,14 @@ func truncateText(text string, max int) string {
 	if text == "" {
 		return "-"
 	}
-	if len(text) <= max {
+	runes := []rune(text)
+	if len(runes) <= max {
 		return text
 	}
 	if max <= 3 {
-		return text[:max]
+		return string(runes[:max])
 	}
-	return text[:max-3] + "..."
+	return string(runes[:max-3]) + "..."
 }
 
 func formatTimestamp(t time.Time) string {

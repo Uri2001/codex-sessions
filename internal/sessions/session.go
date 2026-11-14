@@ -11,13 +11,16 @@ import (
 
 // Session holds aggregated information for a single Codex CLI session.
 type Session struct {
-	ID         string
-	Name       string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	WorkingDir string
-	LastAction string
-	FilePaths  []string
+	ID          string
+	Name        string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	WorkingDir  string
+	LastRequest string
+	FilePaths   []string
+
+	lastUser      messageCandidate
+	lastAssistant messageCandidate
 }
 
 // Snapshot returns a shallow copy of the session. Useful when storing a copy for

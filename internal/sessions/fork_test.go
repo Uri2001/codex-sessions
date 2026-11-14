@@ -28,8 +28,8 @@ func TestParseForkMetadata(t *testing.T) {
 			if !sess.CreatedAt.Equal(wantCreated) || !sess.UpdatedAt.Equal(wantUpdated) {
 				t.Fatalf("unexpected timestamps: created=%s updated=%s", sess.CreatedAt, sess.UpdatedAt)
 			}
-			if sess.LastAction != "user_message: continue the fork" {
-				t.Fatalf("did not read events after inherited metadata: %q", sess.LastAction)
+			if sess.LastRequest != "continue the fork" {
+				t.Fatalf("did not read events after inherited metadata: %q", sess.LastRequest)
 			}
 		})
 	}

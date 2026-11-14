@@ -4,12 +4,18 @@
 
 ## Features
 
-- **Fuzzy search** as you type across session names, IDs, working directories, timestamps, and last actions.
+- **Fuzzy search** as you type across session names, IDs, working directories, timestamps, and latest user requests.
 - **Session names** from Codex CLI `/rename`, displayed alongside session IDs.
 - **Keyboard-first navigation** with arrow keys, Page Up/Down, and instant highlighting.
 - **Quick resume** with `Enter`, invoking `codex resume <session-id>` (or printing the ID with `--no-resume`).
 - **Safe deletion** of a session and all associated log files via `Del`.
 - **Responsive layout** powered by [`tview`](https://github.com/rivo/tview) and [`tcell`](https://github.com/gdamore/tcell) that works on Windows, Linux, and macOS terminals.
+
+### Last Request
+
+The `Last Request` column shows the latest non-empty user message, ignoring known injected environment and instruction blocks. If no user request is available, it shows the latest assistant message; sessions without either show `-`. Message records and legacy message events are supported. Service events such as task completion, token counts, and tool output never replace the request.
+
+Whitespace is collapsed and previews are shortened safely for Unicode. Fuzzy search uses the complete cleaned text, including text beyond the preview. `Updated` and session ordering still reflect the latest log activity.
 
 ## Installation
 

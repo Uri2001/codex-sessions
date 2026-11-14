@@ -10,14 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 )
 
 const (
 	defaultRelativeSessionsDir = ".codex/sessions"
 	maxLineSize                = 16 * 1024 * 1024 // 16 MiB, to safely fit large encrypted payloads
-	snippetLimit               = 160
 )
 
 // Load discovers and parses Codex CLI sessions located under sessionsDir. When sessionsDir
@@ -73,13 +71,14 @@ func Load(sessionsDir string) ([]Session, error) {
 		}
 		if session.UpdatedAt.After(existing.UpdatedAt) {
 			existing.UpdatedAt = session.UpdatedAt
-			existing.LastAction = session.LastAction
 			if session.WorkingDir != "" {
 				existing.WorkingDir = session.WorkingDir
 			}
 		} else if existing.WorkingDir == "" && session.WorkingDir != "" {
 			existing.WorkingDir = session.WorkingDir
 		}
+
+		existing.mergeRequests(session)
 
 		for _, fp := range session.FilePaths {
 			if !contains(existing.FilePaths, fp) {
@@ -192,13 +191,9 @@ func parseSessionFile(path string) (*Session, error) {
 			}
 		}
 
+		session.readRequest(entry, ts)
 		if ts.After(lastTS) || lastTS.IsZero() {
 			lastTS = ts
-			if desc := describeEntry(entry); desc != "" {
-				session.LastAction = desc
-			} else if entry.Type == "session_meta" && session.LastAction == "" {
-				session.LastAction = "session started"
-			}
 		}
 
 		if errors.Is(err, io.EOF) {
@@ -241,223 +236,6 @@ type sessionMetaPayload struct {
 	ID        string `json:"id"`
 	Timestamp string `json:"timestamp"`
 	CWD       string `json:"cwd"`
-}
-
-func describeEntry(entry logEntry) string {
-	switch entry.Type {
-	case "response_item":
-		return describeResponseItem(entry.Payload)
-	case "event_msg":
-		return describeEventMessage(entry.Payload)
-	default:
-		return ""
-	}
-}
-
-type responseItemPayload struct {
-	Type      string             `json:"type"`
-	Role      string             `json:"role,omitempty"`
-	Content   []messageContent   `json:"content,omitempty"`
-	Name      string             `json:"name,omitempty"`
-	Arguments string             `json:"arguments,omitempty"`
-	Output    string             `json:"output,omitempty"`
-	Summary   []messageContent   `json:"summary,omitempty"`
-	CallID    string             `json:"call_id,omitempty"`
-	Metadata  json.RawMessage    `json:"metadata,omitempty"`
-	Result    json.RawMessage    `json:"result,omitempty"`
-	Error     *responseItemError `json:"error,omitempty"`
-	Status    string             `json:"status,omitempty"`
-	Title     string             `json:"title,omitempty"`
-	AltText   string             `json:"alt_text,omitempty"`
-	Media     []json.RawMessage  `json:"media,omitempty"`
-	Parts     []json.RawMessage  `json:"parts,omitempty"`
-	Kind      string             `json:"kind,omitempty"`
-	Data      json.RawMessage    `json:"data,omitempty"`
-	Encrypted json.RawMessage    `json:"encrypted_content,omitempty"`
-}
-
-type responseItemError struct {
-	Message string `json:"message"`
-}
-
-type messageContent struct {
-	Type string `json:"type"`
-	Text string `json:"text,omitempty"`
-}
-
-func describeResponseItem(raw json.RawMessage) string {
-	var payload responseItemPayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return ""
-	}
-
-	switch payload.Type {
-	case "message":
-		text := firstNonEmptyText(payload.Content)
-		if text == "" {
-			text = firstNonEmptyText(payload.Summary)
-		}
-		if text == "" && payload.Title != "" {
-			text = payload.Title
-		}
-		if text == "" {
-			return ""
-		}
-
-		prefix := strings.TrimSpace(payload.Role)
-		if prefix != "" {
-			return fmt.Sprintf("%s: %s", prefix, compactSnippet(text))
-		}
-		return compactSnippet(text)
-	case "reasoning":
-		text := firstNonEmptyText(payload.Summary)
-		if text == "" {
-			text = firstNonEmptyText(payload.Content)
-		}
-		if text == "" {
-			return ""
-		}
-		return fmt.Sprintf("reasoning: %s", compactSnippet(text))
-	case "function_call":
-		desc := fmt.Sprintf("call %s", payload.Name)
-		if args := describeFunctionArguments(payload.Name, payload.Arguments); args != "" {
-			desc = fmt.Sprintf("%s %s", desc, args)
-		}
-		return desc
-	case "function_call_output":
-		return describeFunctionOutput(payload)
-	default:
-		if payload.Title != "" {
-			return compactSnippet(payload.Title)
-		}
-		return ""
-	}
-}
-
-func describeFunctionArguments(name, argsJSON string) string {
-	if argsJSON == "" {
-		return ""
-	}
-	switch name {
-	case "shell":
-		var call struct {
-			Command []string `json:"command"`
-			Workdir string   `json:"workdir"`
-		}
-		if err := json.Unmarshal([]byte(argsJSON), &call); err != nil {
-			return ""
-		}
-		if len(call.Command) == 0 {
-			return ""
-		}
-		cmd := strings.Join(call.Command, " ")
-		return compactSnippet(cmd)
-	default:
-		return ""
-	}
-}
-
-func describeFunctionOutput(payload responseItemPayload) string {
-	if payload.Output == "" {
-		if payload.Error != nil && payload.Error.Message != "" {
-			return fmt.Sprintf("call %s error: %s", payload.Name, compactSnippet(payload.Error.Message))
-		}
-		return fmt.Sprintf("call %s completed", payload.Name)
-	}
-
-	var out struct {
-		Output   string `json:"output"`
-		Metadata struct {
-			ExitCode *int `json:"exit_code"`
-		} `json:"metadata"`
-		Error string `json:"error"`
-	}
-	if err := json.Unmarshal([]byte(payload.Output), &out); err != nil {
-		return fmt.Sprintf("call %s output", payload.Name)
-	}
-
-	switch {
-	case out.Error != "":
-		return fmt.Sprintf("call %s error: %s", payload.Name, compactSnippet(out.Error))
-	case out.Metadata.ExitCode != nil:
-		snippet := compactSnippet(out.Output)
-		if snippet != "" {
-			return fmt.Sprintf("call %s exit %d: %s", payload.Name, *out.Metadata.ExitCode, snippet)
-		}
-		return fmt.Sprintf("call %s exit %d", payload.Name, *out.Metadata.ExitCode)
-	default:
-		if out.Output == "" {
-			return fmt.Sprintf("call %s completed", payload.Name)
-		}
-		return fmt.Sprintf("call %s: %s", payload.Name, compactSnippet(out.Output))
-	}
-}
-
-type eventMsgPayload struct {
-	Type    string          `json:"type"`
-	Message string          `json:"message,omitempty"`
-	Text    string          `json:"text,omitempty"`
-	Kind    string          `json:"kind,omitempty"`
-	Status  string          `json:"status,omitempty"`
-	Data    json.RawMessage `json:"data,omitempty"`
-	Detail  json.RawMessage `json:"detail,omitempty"`
-}
-
-func describeEventMessage(raw json.RawMessage) string {
-	var payload eventMsgPayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return ""
-	}
-	switch payload.Type {
-	case "user_message", "assistant_message", "system_message":
-		text := payload.Message
-		if text == "" {
-			text = payload.Text
-		}
-		if text == "" {
-			return ""
-		}
-		return fmt.Sprintf("%s: %s", payload.Type, compactSnippet(text))
-	case "tool_progress":
-		if payload.Message != "" {
-			return fmt.Sprintf("tool progress: %s", compactSnippet(payload.Message))
-		}
-	case "token_count":
-		return "token usage updated"
-	case "command_output":
-		if payload.Message != "" {
-			return fmt.Sprintf("command output: %s", compactSnippet(payload.Message))
-		}
-	}
-	if payload.Message != "" {
-		return fmt.Sprintf("%s: %s", payload.Type, compactSnippet(payload.Message))
-	}
-	return payload.Type
-}
-
-func firstNonEmptyText(items []messageContent) string {
-	for _, item := range items {
-		if strings.TrimSpace(item.Text) != "" {
-			return item.Text
-		}
-	}
-	return ""
-}
-
-func compactSnippet(text string) string {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return ""
-	}
-	// Collapse whitespace similar to fzf preview.
-	text = strings.Join(strings.Fields(text), " ")
-	if len(text) <= snippetLimit {
-		return text
-	}
-	if snippetLimit <= 3 {
-		return text[:snippetLimit]
-	}
-	return text[:snippetLimit-3] + "..."
 }
 
 func bytesTrimRightNewline(b []byte) []byte {
